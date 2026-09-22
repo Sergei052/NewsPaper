@@ -1,0 +1,21 @@
+{% extends 'default.html' %}
+
+{% block title %}Все новости{% endblock %}
+
+{% block content %}
+    <h1>Все новости ({{ news|length }})</h1>
+
+    {% if news %}
+        {% for item in news %}
+            <article>
+                <h2>
+                    <a href="{% url 'news:detail' item.pk %}">{{ item.postTitle }}</a>
+                </h2>
+                <p><b>Дата публикации:</b> {{ item.postDate|date:'d.m.Y' }}</p>
+                <p>{{ item.preview|truncatewords:20 }}</p>
+            </article>
+        {% endfor %}
+    {% else %}
+        <p>Новостей пока нет.</p>
+    {% endif %}
+{% endblock %}

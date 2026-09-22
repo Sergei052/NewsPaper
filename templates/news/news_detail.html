@@ -1,0 +1,13 @@
+{% extends 'default.html' %}
+
+{% block title %}{{ news_item.postTitle }}{% endblock %}
+
+{% block content %}
+    <article>
+        <h1>{{ news_item.postTitle }}</h1>
+        <p>Автор: {{ news_item.postAuthor.authorUser.username }}</p>
+        <p>Дата: {{ news_item.postDate|date:'d.m.Y H:i' }}</p>
+        <p>Рейтинг: {{ news_item.postRating }}</p>
+        <div>{{ news_item.postText|linebreaks }}</div>
+    </article>
+{% endblock %}
