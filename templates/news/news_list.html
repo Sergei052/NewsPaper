@@ -1,20 +1,26 @@
 {% extends 'default.html' %}
 
+{% load news_filters %}
+
 {% block title %}Все новости{% endblock %}
 
 {% block content %}
-    <h1>Все новости ({{ news|length }})</h1>
+    <h1 class="mb-4">Все новости ({{ news|length }})</h1>
 
     {% if news %}
-        {% for item in news %}
-            <article>
-                <h2>
-                    <a href="{% url 'news:detail' item.pk %}">{{ item.postTitle }}</a>
-                </h2>
-                <p><b>Дата публикации:</b> {{ item.postDate|date:'d.m.Y' }}</p>
-                <p>{{ item.preview|truncatewords:20 }}</p>
-            </article>
-        {% endfor %}
+        <div class="news-list">
+            {% for item in news %}
+                <article class="news-card">
+                    <h2>
+                        <a href="{% url 'news:detail' item.pk %}">{{ item.postTitle }}</a>
+                    </h2>
+                    <div class="news-meta">
+                        <b>Дата публикации:</b> {{ item.postDate|date:'d.m.Y.l' }}
+                    </div>
+                    <p class="news-preview">{{ item.postText|censor|truncatewords:10 }}</p>
+                </article>
+            {% endfor %}
+        </div>
     {% else %}
         <p>Новостей пока нет.</p>
     {% endif %}

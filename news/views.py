@@ -10,7 +10,6 @@ class NewsListView(ListView):
     ordering= '-created_at'
     template_name = 'news/news_list.html'
     context_object_name = 'news'
-    ordering = ['-postDate']
 
     def get_queryset(self):
         return super().get_queryset().filter(postType=Post.NEWS)
@@ -21,7 +20,7 @@ class NewsDetailView(DetailView):
 
     model = Post
     template_name = 'news/news_detail.html'
-    context_object_name = 'post'
+    context_object_name = 'news_item'
 
     def get_queryset(self):
         return super().get_queryset().filter(postType=Post.NEWS)

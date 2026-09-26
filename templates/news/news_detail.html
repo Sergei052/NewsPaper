@@ -1,4 +1,5 @@
 {% extends 'default.html' %}
+{% load news_filters %}
 
 {% block title %}{{ news_item.postTitle }}{% endblock %}
 
@@ -8,6 +9,6 @@
         <p>Автор: {{ news_item.postAuthor.authorUser.username }}</p>
         <p>Дата: {{ news_item.postDate|date:'d.m.Y H:i' }}</p>
         <p>Рейтинг: {{ news_item.postRating }}</p>
-        <div>{{ news_item.postText|linebreaks }}</div>
+        <div>{{ news_item.postText|censor|linebreaks }}</div>
     </article>
 {% endblock %}

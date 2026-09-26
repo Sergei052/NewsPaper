@@ -4,6 +4,7 @@ from django.urls import reverse
 
 from .models import Author, Post
 
+from .templatetags.news_filters import censor
 
 class NewsViewsTests(TestCase):
     def setUp(self):
@@ -34,3 +35,20 @@ class NewsViewsTests(TestCase):
 
         self.assertContains(response, 'Текст новости')
         self.assertTemplateUsed(response, 'news/news_detail.html')
+
+class CensorFilterTests(TestCase):
+    def test_censor_replaces_forbidden_words(self):
+        result = censor('Это плохой и ужасный текст')
+
+        self.assertEqual(
+            result,
+            'Это п****й и у****ый текст',
+        )
+
+    def test_censor_works_without_case_sensitivity(self):
+        self.assertEqual(censor('ПЛОХО'), 'П****')
+        self.assertEqual(censor('Плохо'), 'П****')
+
+    def test_censor_handles_empty_value(self):
+        self.assertEqual(censor(''), '')
+        self.assertIsNone(censor(None))
