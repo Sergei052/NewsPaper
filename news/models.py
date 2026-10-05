@@ -28,7 +28,8 @@ class Category(models.Model):
     """Тематическая категория публикаций."""
 
     categoryName = models.CharField(max_length=64, unique=True)
-
+    def __str__(self):
+        return self.categoryName
 
 class Post(models.Model):
     ARTICLE = 'AR'
