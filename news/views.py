@@ -93,6 +93,7 @@ class NewsCreateView(LoginRequiredMixin,CreateView):
     form_class = PostForm
     template_name = 'news/news_form.html'
     success_url = reverse_lazy('news:list')
+    login_url = 'admin:login'
 
     def form_valid(self, form):
         # Получаем автора текущего пользователя
@@ -107,6 +108,7 @@ class NewsEditView(LoginRequiredMixin, UpdateView):
     form_class = PostForm
     template_name = 'news/news_form.html'
     success_url = reverse_lazy('news:list')
+    login_url = 'admin:login'
 
     def get_queryset(self):
         # Пользователь может редактировать только свои новости
@@ -118,7 +120,7 @@ class NewsDeleteView(LoginRequiredMixin, DeleteView):
     model = Post
     template_name = 'news/news_confirm_delete.html'
     success_url = reverse_lazy('news:list')
-
+    login_url = 'admin:login'
     def get_queryset(self):
         # Пользователь может удалять только свои новости
         return super().get_queryset().filter(postType=Post.NEWS, postAuthor__authorUser=self.request.user)
@@ -172,7 +174,7 @@ class ArticleCreateView(LoginRequiredMixin, CreateView):
     form_class = PostForm
     template_name = 'articles/article_form.html'
     success_url = reverse_lazy('articles:list')
-
+    login_url = 'admin:login'
     def form_valid(self, form):
         author = get_object_or_404(Author, authorUser=self.request.user)
         form.instance.postAuthor = author
@@ -187,7 +189,7 @@ class ArticleEditView(LoginRequiredMixin, UpdateView):
     form_class = PostForm
     template_name = 'articles/article_form.html'
     success_url = reverse_lazy('articles:list')
-
+    login_url = 'admin:login'
     def get_queryset(self):
         return super().get_queryset().filter(postType=Post.ARTICLE, postAuthor__authorUser=self.request.user)
 
@@ -198,6 +200,6 @@ class ArticleDeleteView(LoginRequiredMixin, DeleteView):
     model = Post
     template_name = 'articles/article_confirm_delete.html'
     success_url = reverse_lazy('articles:list')
-
+    login_url = 'admin:login'
     def get_queryset(self):
         return super().get_queryset().filter(postType=Post.ARTICLE, postAuthor__authorUser=self.request.user)

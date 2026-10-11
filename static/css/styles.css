@@ -10832,7 +10832,9 @@ textarea.form-control-lg {
 body {
     background: #f8f9fa;
     font-family: Arial, sans-serif;
+    color: #1f2937;
 }
+
 
 h1, h2 {
     color: #1f2937;
@@ -10917,7 +10919,7 @@ h1, h2 {
 .form-label {
   display: block;
   margin-bottom: 0.5rem;
-  color: #e5e7eb;
+  color: #1f2937;
   font-weight: 500;
 }
 
