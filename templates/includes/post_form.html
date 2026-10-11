@@ -1,0 +1,54 @@
+<div class="mx-auto" style="max-width: 800px;">
+    <h1 class="mb-4">{{ heading }}</h1>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="mb-4">
+            <label for="{{ form.postTitle.id_for_label }}" class="form-label">
+                {{ form.postTitle.label }} <span class="text-danger">*</span>
+            </label>
+            {{ form.postTitle }}
+            {% for error in form.postTitle.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="mb-4">
+            <label for="{{ form.postText.id_for_label }}" class="form-label">
+                {{ form.postText.label }} <span class="text-danger">*</span>
+            </label>
+            {{ form.postText }}
+            {% for error in form.postText.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label">
+                {{ form.postCategory.label }} <span class="text-danger">*</span>
+            </label>
+            <div class="border rounded bg-white p-3">
+                {% for checkbox in form.postCategory %}
+                    <div class="form-check">
+                        {{ checkbox.tag }}
+                        <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                            {{ checkbox.choice_label }}
+                        </label>
+                    </div>
+                {% empty %}
+                    <span class="text-muted">Категорий пока нет. Добавьте их в админке.</span>
+                {% endfor %}
+            </div>
+            {% for error in form.postCategory.errors %}
+                <div class="text-danger small mt-1">{{ error }}</div>
+            {% endfor %}
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary flex-fill">{{ submit_label }}</button>
+            <a href="{{ cancel_url }}" class="btn btn-secondary flex-fill">Отменить</a>
+        </div>
+    </form>
+</div>

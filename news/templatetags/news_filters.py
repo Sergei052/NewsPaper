@@ -1,3 +1,5 @@
+import re
+
 from django import template
 
 register = template.Library()
@@ -5,29 +7,21 @@ register = template.Library()
 # Список нежелательных слов
 FORBIDDEN_WORDS = ['плохо', 'скучно', 'плохой', 'ужас', 'ужасный']
 
+# Длинные слова идут первыми: иначе «ужас» «съест» начало слова «ужасный»
+_PATTERN = re.compile(
+    '|'.join(re.escape(word) for word in sorted(FORBIDDEN_WORDS, key=len, reverse=True)),
+    re.IGNORECASE,
+)
+
+
+def _mask(match):
+    word = match.group(0)
+    return word[0] + '*' * (len(word) - 1)
+
 
 @register.filter
 def censor(text):
+    """Заменяет все буквы нежелательных слов, кроме первой, на «*»."""
     if not text:
         return text
-
-    result = text
-    for word in FORBIDDEN_WORDS:
-        replacement = word[0] + '*' * (len(word) - 1)
-
-        result = replace_case_insensitive(result, word, replacement)
-
-    return result
-
-
-def replace_case_insensitive(text, old, new):
-    import re
-    pattern = re.compile(re.escape(old), re.IGNORECASE)
-
-    def replacer(match):
-        matched_text = match.group(0)
-        if matched_text[0].isupper():
-            return new[0].upper() + new[1:]
-        return new
-
-    return pattern.sub(replacer, text)
+    return _PATTERN.sub(_mask, str(text))

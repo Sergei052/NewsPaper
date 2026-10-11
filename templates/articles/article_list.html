@@ -1,4 +1,5 @@
 {% extends 'default.html' %}
+{% load news_filters %}
 
 {% block title %}Все статьи{% endblock %}
 
@@ -6,7 +7,9 @@
     <h1 class="mb-4">Все статьи ({{ paginator.count }})</h1>
 
     <div class="mb-3">
-        <a href="{% url 'news:articles_create' %}" class="btn btn-success">+ Добавить статью</a>
+        {% if user.is_authenticated %}
+            <a href="{% url 'news:articles_create' %}" class="btn btn-success">+ Добавить статью</a>
+        {% endif %}
         <a href="{% url 'news:list' %}" class="btn btn-info">← Назад к новостям</a>
     </div>
 
@@ -15,63 +18,25 @@
             {% for item in articles %}
                 <article class="news-card">
                     <h2>
-                        <a href="{% url 'news:articles_detail' item.pk %}">{{ item.postTitle }}</a>
+                        <a href="{% url 'news:articles_detail' item.pk %}">{{ item.postTitle|censor }}</a>
                     </h2>
                     <div class="news-meta">
-                        <b>Автор:</b> {{ item.postAuthor.authorUser.get_full_name }}<br>
-                        <b>Дата публикации:</b> {{ item.created_at|date:'d.m.Y' }}
+                        <b>Автор:</b> {{ item.postAuthor.authorUser.get_full_name|default:item.postAuthor.authorUser.username }}<br>
+                        <b>Дата публикации:</b> {{ item.postDate|date:'d.m.Y' }}
                     </div>
-                    <p class="news-preview">{{ item.postText|truncatewords:15 }}</p>
-                    <div class="news-actions">
+                    <p class="news-preview">{{ item.postText|censor|truncatewords:15 }}</p>
+                    <div class="news-actions mt-3">
                         <a href="{% url 'news:articles_detail' item.pk %}" class="btn btn-sm btn-info">Читать</a>
-                        <a href="{% url 'news:articles_edit' item.pk %}" class="btn btn-sm btn-warning">Редактировать</a>
-                        <a href="{% url 'news:articles_delete' item.pk %}" class="btn btn-sm btn-danger">Удалить</a>
+                        {% if user == item.postAuthor.authorUser %}
+                            <a href="{% url 'news:articles_edit' item.pk %}" class="btn btn-sm btn-warning">Редактировать</a>
+                            <a href="{% url 'news:articles_delete' item.pk %}" class="btn btn-sm btn-danger">Удалить</a>
+                        {% endif %}
                     </div>
                 </article>
             {% endfor %}
         </div>
 
-        {% if is_paginated %}
-            <nav aria-label="Page navigation" class="mt-4">
-                <ul class="pagination justify-content-center">
-                    {% if show_first_page %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1">« Первая</a>
-                        </li>
-                    {% endif %}
-
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">← Назад</a>
-                        </li>
-                    {% endif %}
-
-                    {% for num in page_range %}
-                        {% if num == page_obj.number %}
-                            <li class="page-item active">
-                                <span class="page-link">{{ num }}</span>
-                            </li>
-                        {% else %}
-                            <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Вперед →</a>
-                        </li>
-                    {% endif %}
-
-                    {% if show_last_page %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ total_pages }}">Последняя »</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-        {% endif %}
+        {% include 'includes/pagination.html' %}
     {% else %}
         <p>Статей пока нет.</p>
     {% endif %}

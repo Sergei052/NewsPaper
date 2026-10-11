@@ -1,7 +1,6 @@
+from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Sum
-from django.contrib.auth.models import User
-from django.utils import timezone
 
 
 class Author(models.Model):
@@ -9,6 +8,9 @@ class Author(models.Model):
 
     authorUser = models.OneToOneField(User, on_delete=models.CASCADE)
     authorRating = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.authorUser.username
 
     def update_rating(self):
         """Пересчитать рейтинг автора по его публикациям и комментариям."""
@@ -28,8 +30,10 @@ class Category(models.Model):
     """Тематическая категория публикаций."""
 
     categoryName = models.CharField(max_length=64, unique=True)
+
     def __str__(self):
         return self.categoryName
+
 
 class Post(models.Model):
     ARTICLE = 'AR'
@@ -47,11 +51,8 @@ class Post(models.Model):
     postText = models.TextField()
     postRating = models.IntegerField(default=0)
 
-    created_at = models.DateTimeField(default=timezone.now)
-    title = models.CharField(max_length=255, default='')
-    text = models.TextField(default='', blank=True)
     def __str__(self):
-        return f'{self.title}'
+        return self.postTitle
 
     def like(self):
         self.postRating += 1
@@ -62,6 +63,8 @@ class Post(models.Model):
         self.save(update_fields=['postRating'])
 
     def preview(self):
+        if len(self.postText) <= 124:
+            return self.postText
         return f'{self.postText[:124]}...'
 
 
@@ -88,4 +91,3 @@ class Comment(models.Model):
     def dislike(self):
         self.commentRating -= 1
         self.save(update_fields=['commentRating'])
-

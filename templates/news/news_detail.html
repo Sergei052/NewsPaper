@@ -1,14 +1,24 @@
 {% extends 'default.html' %}
 {% load news_filters %}
 
-{% block title %}{{ news_item.postTitle }}{% endblock %}
+{% block title %}{{ news_item.postTitle|censor }}{% endblock %}
 
 {% block content %}
-    <article>
-        <h1>{{ news_item.postTitle }}</h1>
-        <p>Автор: {{ news_item.postAuthor.authorUser.username }}</p>
-        <p>Дата: {{ news_item.postDate|date:'d.m.Y H:i' }}</p>
-        <p>Рейтинг: {{ news_item.postRating }}</p>
-        <div>{{ news_item.postText|censor|linebreaks }}</div>
+    <article class="news-detail">
+        <h1>{{ news_item.postTitle|censor }}</h1>
+        <div class="news-meta">
+            <b>Автор:</b> {{ news_item.postAuthor.authorUser.get_full_name|default:news_item.postAuthor.authorUser.username }}<br>
+            <b>Дата:</b> {{ news_item.postDate|date:'d.m.Y H:i' }}<br>
+            <b>Рейтинг:</b> {{ news_item.postRating }}
+        </div>
+        <div class="content">{{ news_item.postText|censor|linebreaks }}</div>
+
+        <div class="news-actions mt-4">
+            <a href="{% url 'news:list' %}" class="btn btn-info">← Назад</a>
+            {% if user == news_item.postAuthor.authorUser %}
+                <a href="{% url 'news:edit' news_item.pk %}" class="btn btn-warning">Редактировать</a>
+                <a href="{% url 'news:delete' news_item.pk %}" class="btn btn-danger">Удалить</a>
+            {% endif %}
+        </div>
     </article>
 {% endblock %}

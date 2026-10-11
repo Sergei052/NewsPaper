@@ -1,205 +1,174 @@
-from django.views.generic import DetailView, ListView,CreateView,UpdateView, DeleteView
-from django.urls import reverse_lazy
-from .models import Post, Author
-from django_filters.views import FilterView
-from .forms import PostForm, PostFilterSet
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import get_object_or_404
+from django.urls import reverse_lazy
+from django.views.generic import (
+    CreateView, DeleteView, DetailView, ListView, UpdateView,
+)
+from django_filters.views import FilterView
+
+from .forms import PostFilterSet, PostForm
+from .models import Author, Post
 
 
-class NewsListView(ListView):
+class PaginationMixin:
+    """Добавляет в контекст данные для компактной пагинации (окно из 3 страниц)."""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        paginator = context.get('paginator')
+        page_obj = context.get('page_obj')
+        if paginator is None or page_obj is None:
+            return context
+
+        total = paginator.num_pages
+        start = min(max(page_obj.number - 1, 1), max(total - 2, 1))
+        end = min(start + 2, total)
+
+        context['page_range'] = range(start, end + 1)
+        context['show_first_page'] = start > 1
+        context['show_last_page'] = end < total
+        context['total_pages'] = total
+        return context
+
+
+class PostTypeMixin:
+    """Оставляет в выборке только публикации нужного типа (новости или статьи)."""
+
+    post_type = None
+
+    def get_queryset(self):
+        return (
+            super().get_queryset()
+            .filter(postType=self.post_type)
+            .select_related('postAuthor__authorUser')
+        )
+
+
+class OwnPostMixin(LoginRequiredMixin, PostTypeMixin):
+    """Для правки и удаления: только вошедший пользователь и только свои материалы."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(postAuthor__authorUser=self.request.user)
+
+
+class PostCreateMixin(LoginRequiredMixin):
+    """Общая логика создания: автор берётся из текущего пользователя."""
+
+    model = Post
+    form_class = PostForm
+    post_type = None
+
+    def form_valid(self, form):
+        author, _ = Author.objects.get_or_create(authorUser=self.request.user)
+        form.instance.postAuthor = author
+        form.instance.postType = self.post_type
+        return super().form_valid(form)
+
+
+# ---------- Новости ----------
+
+class NewsListView(PaginationMixin, PostTypeMixin, ListView):
     """Список публикаций с типом «новость»."""
 
     model = Post
-    ordering= '-created_at'
+    post_type = Post.NEWS
+    ordering = '-postDate'
     template_name = 'news/news_list.html'
     context_object_name = 'news'
     paginate_by = 10
 
-    def get_queryset(self):
-        return super().get_queryset().filter(postType=Post.NEWS)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        paginator = context['paginator']
-        page_obj = context['page_obj']
-        page_num = page_obj.number
-
-        # Показываем ближайшие страницы (макс 5)
-        if paginator.num_pages <= 5:
-            context['page_range'] = paginator.page_range
-        else:
-            if page_num <= 3:
-                context['page_range'] = range(1, 4)
-            elif page_num >= paginator.num_pages - 2:
-                context['page_range'] = range(paginator.num_pages - 2, paginator.num_pages + 1)
-            else:
-                context['page_range'] = range(page_num - 1, page_num + 2)
-
-        context['show_first_page'] = page_num > 3
-        context['show_last_page'] = page_num < paginator.num_pages - 2
-        context['total_pages'] = paginator.num_pages
-
-        return context
-
-class NewsDetailView(DetailView):
+class NewsDetailView(PostTypeMixin, DetailView):
     """Страница одной новости."""
 
     model = Post
+    post_type = Post.NEWS
     template_name = 'news/news_detail.html'
     context_object_name = 'news_item'
 
-    def get_queryset(self):
-        return super().get_queryset().filter(postType=Post.NEWS)
 
-class NewsSearchView(FilterView):
+class NewsSearchView(PaginationMixin, PostTypeMixin, FilterView):
     """Поиск и фильтрация новостей."""
 
     model = Post
+    post_type = Post.NEWS
+    ordering = '-postDate'
     filterset_class = PostFilterSet
     template_name = 'news/news_search.html'
     context_object_name = 'news'
     paginate_by = 10
 
-    def get_queryset(self):
-        return super().get_queryset().filter(postType=Post.NEWS).order_by('-created_at')
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        paginator = context['paginator']
-        page_obj = context['page_obj']
-        page_num = page_obj.number
-
-        if paginator.num_pages <= 5:
-            context['page_range'] = paginator.page_range
-        else:
-            if page_num <= 3:
-                context['page_range'] = range(1, 4)
-            elif page_num >= paginator.num_pages - 2:
-                context['page_range'] = range(paginator.num_pages - 2, paginator.num_pages + 1)
-            else:
-                context['page_range'] = range(page_num - 1, page_num + 2)
-
-        context['show_first_page'] = page_num > 3
-        context['show_last_page'] = page_num < paginator.num_pages - 2
-        context['total_pages'] = paginator.num_pages
-
-        return context
-
-class NewsCreateView(LoginRequiredMixin,CreateView):
+class NewsCreateView(PostCreateMixin, CreateView):
     """Создание новости."""
 
+    post_type = Post.NEWS
+    template_name = 'news/news_form.html'
+    success_url = reverse_lazy('news:list')
+
+
+class NewsEditView(OwnPostMixin, UpdateView):
+    """Редактирование новости (только своей)."""
+
     model = Post
+    post_type = Post.NEWS
     form_class = PostForm
     template_name = 'news/news_form.html'
     success_url = reverse_lazy('news:list')
-    login_url = 'admin:login'
 
-    def form_valid(self, form):
-        # Получаем автора текущего пользователя
-        author = get_object_or_404(Author, authorUser=self.request.user)
-        form.instance.postAuthor = author
-        form.instance.postType = Post.NEWS
-        return super().form_valid(form)
-class NewsEditView(LoginRequiredMixin, UpdateView):
-    """Редактирование новости."""
+
+class NewsDeleteView(OwnPostMixin, DeleteView):
+    """Удаление новости (только своей)."""
 
     model = Post
-    form_class = PostForm
-    template_name = 'news/news_form.html'
-    success_url = reverse_lazy('news:list')
-    login_url = 'admin:login'
-
-    def get_queryset(self):
-        # Пользователь может редактировать только свои новости
-        return super().get_queryset().filter(postType=Post.NEWS, postAuthor__authorUser=self.request.user)
-
-class NewsDeleteView(LoginRequiredMixin, DeleteView):
-    """Удаление новости."""
-
-    model = Post
+    post_type = Post.NEWS
     template_name = 'news/news_confirm_delete.html'
     success_url = reverse_lazy('news:list')
-    login_url = 'admin:login'
-    def get_queryset(self):
-        # Пользователь может удалять только свои новости
-        return super().get_queryset().filter(postType=Post.NEWS, postAuthor__authorUser=self.request.user)
 
-class ArticleListView(ListView):
-    """Список статей с постраничным выводом"""
+
+# ---------- Статьи ----------
+
+class ArticleListView(PaginationMixin, PostTypeMixin, ListView):
+    """Список статей с постраничным выводом."""
+
     model = Post
-    ordering = '-created_at'
+    post_type = Post.ARTICLE
+    ordering = '-postDate'
     template_name = 'articles/article_list.html'
     context_object_name = 'articles'
     paginate_by = 10
 
-    def get_queryset(self):
-        return super().get_queryset().filter(postType=Post.ARTICLE)
 
-    def get_contest_date(self,**kwargs):
-        context= super().get_context_data(**kwargs)
-        paginator = context['paginator']
-        page_obj = context['page_obj']
-        page_num = page_obj.number
+class ArticleDetailView(PostTypeMixin, DetailView):
+    """Страница одной статьи."""
 
-        if paginator.num_pages <= 5:
-            context['page_range'] = paginator.page_range
-        else:
-            if page_num <= 3:
-                context['page_range'] = range(1, 4)
-            elif page_num >= paginator.num_pages - 2:
-                context['page_range'] = range(paginator.num_pages - 2, paginator.num_pages + 1)
-            else:
-                context['page_range'] = range(page_num - 1, page_num + 2)
-
-        context['show_first_page'] = page_num > 3
-        context['show_last_page'] = page_num < paginator.num_pages - 2
-        context['total_pages'] = paginator.num_pages
-
-        return context
-
-class ArticleDetailView(DetailView):
-    """Страница одной статьи"""
     model = Post
-    template_name = "articles/article_detail.html"
+    post_type = Post.ARTICLE
+    template_name = 'articles/article_detail.html'
     context_object_name = 'article'
 
-    def get_queryset(self):
-        return super().get_queryset().filter(postType=Post.ARTICLE)
 
-class ArticleCreateView(LoginRequiredMixin, CreateView):
+class ArticleCreateView(PostCreateMixin, CreateView):
     """Создание статьи."""
 
+    post_type = Post.ARTICLE
+    template_name = 'articles/article_form.html'
+    success_url = reverse_lazy('news:articles_list')
+
+
+class ArticleEditView(OwnPostMixin, UpdateView):
+    """Редактирование статьи (только своей)."""
+
     model = Post
+    post_type = Post.ARTICLE
     form_class = PostForm
     template_name = 'articles/article_form.html'
-    success_url = reverse_lazy('articles:list')
-    login_url = 'admin:login'
-    def form_valid(self, form):
-        author = get_object_or_404(Author, authorUser=self.request.user)
-        form.instance.postAuthor = author
-        form.instance.postType = Post.ARTICLE
-        return super().form_valid(form)
+    success_url = reverse_lazy('news:articles_list')
 
 
-class ArticleEditView(LoginRequiredMixin, UpdateView):
-    """Редактирование статьи."""
+class ArticleDeleteView(OwnPostMixin, DeleteView):
+    """Удаление статьи (только своей)."""
 
     model = Post
-    form_class = PostForm
-    template_name = 'articles/article_form.html'
-    success_url = reverse_lazy('articles:list')
-    login_url = 'admin:login'
-    def get_queryset(self):
-        return super().get_queryset().filter(postType=Post.ARTICLE, postAuthor__authorUser=self.request.user)
-
-
-class ArticleDeleteView(LoginRequiredMixin, DeleteView):
-    """Удаление статьи."""
-
-    model = Post
+    post_type = Post.ARTICLE
     template_name = 'articles/article_confirm_delete.html'
-    success_url = reverse_lazy('articles:list')
-    login_url = 'admin:login'
-    def get_queryset(self):
-        return super().get_queryset().filter(postType=Post.ARTICLE, postAuthor__authorUser=self.request.user)
+    success_url = reverse_lazy('news:articles_list')
