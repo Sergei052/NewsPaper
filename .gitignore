@@ -1,9 +1,10 @@
 __pycache__/
+*.pyc
 venv/
 .venv/
 env/
 .env/
+.env
 db.sqlite3
 staticfiles/
-.env
 .idea/
